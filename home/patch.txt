@@ -1,0 +1,73 @@
+diff --git a/Documentation/RelNotes/2.34.9.txt b/Documentation/RelNotes/2.34.9.txt
+new file mode 100644
+index 00000000000..6586a7c8548
+--- /dev/null
++++ b/Documentation/RelNotes/2.34.9.txt
+@@ -0,0 +1,4 @@
++Git v2.34.9 Release Notes
++=========================
++
++flag
+diff --git a/GIT-VERSION-GEN b/GIT-VERSION-GEN
+index d6e57326845..2d670020e04 100755
+--- a/GIT-VERSION-GEN
++++ b/GIT-VERSION-GEN
+@@ -1,7 +1,7 @@
+ #!/bin/sh
+ 
+ GVF=GIT-VERSION-FILE
+-DEF_VER=v2.34.8
++DEF_VER=v2.34.9
+ 
+ LF='
+ '
+diff --git a/RelNotes b/RelNotes
+index e3d43778903..33b7908e25b 120000
+--- a/RelNotes
++++ b/RelNotes
+@@ -1 +1 @@
+-Documentation/RelNotes/2.34.8.txt
+\ No newline at end of file
++Documentation/RelNotes/2.34.9.txt
+\ No newline at end of file
+diff --git a/refs.c b/refs.c
+index d7cc0a23a3b..7a3976a2130 100644
+--- a/refs.c
++++ b/refs.c
+@@ -47,12 +47,12 @@ static struct ref_storage_be *find_ref_storage_backend(const char *name)
+ static unsigned char refname_disposition[256] = {
+ 	1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+ 	4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+-	4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 1,
++	4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0,
+ 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 4,
+ 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0, 4, 0,
+ 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 4, 4
++	0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 4, 4
+ };
+ 
+ /*
+diff --git a/upload-pack.c b/upload-pack.c
+index c78d55bc674..44cef0bfdc5 100644
+--- a/upload-pack.c
++++ b/upload-pack.c
+@@ -1077,7 +1077,16 @@ static void receive_needs(struct upload_pack_data *data,
+ 			continue;
+ 		}
+ 
+-		if (!skip_prefix(reader->line, "want ", &arg) ||
++		if (skip_prefix(reader->line, "want-ref ", &arg)) {
++			struct strbuf refname = STRBUF_INIT;
++			feature_len = strcspn(arg, " \t\n");
++			features = arg + feature_len;
++			strbuf_addf(&refname, "%s%.*s", get_git_namespace(), feature_len, arg);
++			if (read_ref(refname.buf, &oid_buf)) {
++				die("unknown ref %s", arg);
++			}
++			strbuf_release(&refname);
++		} else if (!skip_prefix(reader->line, "want ", &arg) ||
+ 		    parse_oid_hex(arg, &oid_buf, &features))
+ 			die("git upload-pack: protocol error, "
+ 			    "expected to get object ID, not '%s'", reader->line);
